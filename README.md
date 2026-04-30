@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Admin-Controlled Dynamic Portfolio
 
 A fully dynamic, production-ready MERN stack portfolio. The frontend acts as an animated, 3D-enhanced shell, while all data is securely managed through a hidden Admin panel.
@@ -27,3 +28,6 @@ A fully dynamic, production-ready MERN stack portfolio. The frontend acts as an 
 2. The system will detect no admin exists and prompt you for first-time setup.
 3. Enter your email, password, and the `ADMIN_SETUP_KEY` you defined in your `.env` file.
 4. You will be logged in to the admin panel. From there, fill in all sections to build your homepage!
+=======
+# Portfolio
+>>>>>>> d1c59093f86165be3bb9d7f6c412fd3815c84d26
