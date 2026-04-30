@@ -1,0 +1,887 @@
+Build a complete, production-ready MERN stack (MongoDB, Express.js, Node.js, React.js) 
+full-stack web application — an "Admin-Controlled Dynamic Portfolio Website." 
+This must be a fully functional project with zero placeholder code. 
+Every feature described below must be implemented end-to-end.
+
+═══════════════════════════════════════════════════════
+PROJECT OVERVIEW
+═══════════════════════════════════════════════════════
+
+The portfolio homepage is a blank shell — it has NO hardcoded content. 
+ALL content (name, bio, photos, experience, skills, videos, locations, 
+navbar links, etc.) is stored in MongoDB and fetched via REST APIs.
+
+The admin (portfolio owner) logs in from a small hidden link in the footer 
+("⚙" icon, very subtle, opacity 0.3) and gets access to a full Admin Panel 
+where they control every single section of the homepage.
+
+This system must be 100% universal — someone can clone it, set their own 
+.env variables, register their admin account on first visit, and have a 
+fully working personal portfolio controlled entirely from the admin panel. 
+No code changes needed — only admin panel inputs.
+
+═══════════════════════════════════════════════════════
+TECH STACK
+═══════════════════════════════════════════════════════
+
+Frontend:
+- React.js (Vite)
+- React Router DOM v6
+- Axios (API calls)
+- Three.js + @react-three/fiber + @react-three/drei (3D sections)
+- Framer Motion (all page animations)
+- react-google-maps/api (location map section)
+- react-beautiful-dnd (drag-to-reorder in admin)
+- react-quill (rich text editor for bio)
+- react-hook-form (all forms)
+- react-toastify (notifications)
+- Tailwind CSS (styling)
+- Google Fonts (use "Syne" for headings, "DM Sans" for body — import via @import in CSS)
+
+Backend:
+- Node.js + Express.js
+- MongoDB + Mongoose
+- JWT (jsonwebtoken) — stored in httpOnly cookie
+- bcryptjs (password hashing)
+- Multer + Cloudinary (image/file uploads)
+- multer-storage-cloudinary
+- express-rate-limit (contact form spam protection)
+- helmet + cors + morgan
+- express-validator (input validation)
+- dotenv
+
+═══════════════════════════════════════════════════════
+FOLDER STRUCTURE
+═══════════════════════════════════════════════════════
+
+portfolio/
+├── client/                    ← React frontend (Vite)
+│   ├── public/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── AdminLogin.jsx
+│   │   │   └── AdminDashboard.jsx
+│   │   ├── components/
+│   │   │   ├── homepage/
+│   │   │   │   ├── Navbar.jsx
+│   │   │   │   ├── HeroBanner.jsx
+│   │   │   │   ├── About.jsx
+│   │   │   │   ├── Skills3D.jsx
+│   │   │   │   ├── Experience3D.jsx
+│   │   │   │   ├── Education.jsx
+│   │   │   │   ├── Gallery.jsx
+│   │   │   │   ├── YouTubeSection.jsx
+│   │   │   │   ├── LocationMap.jsx
+│   │   │   │   ├── ContactForm.jsx
+│   │   │   │   └── Footer.jsx
+│   │   │   └── admin/
+│   │   │       ├── Sidebar.jsx
+│   │   │       ├── NavbarManager.jsx
+│   │   │       ├── BannerManager.jsx
+│   │   │       ├── AboutEditor.jsx
+│   │   │       ├── SkillsEditor.jsx
+│   │   │       ├── ExperienceEditor.jsx
+│   │   │       ├── EducationEditor.jsx
+│   │   │       ├── GalleryManager.jsx
+│   │   │       ├── YouTubeManager.jsx
+│   │   │       ├── LocationManager.jsx
+│   │   │       ├── MessagesInbox.jsx
+│   │   │       ├── ProjectsManager.jsx
+│   │   │       ├── TestimonialsManager.jsx
+│   │   │       └── SiteSettings.jsx
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx
+│   │   ├── hooks/
+│   │   │   └── useApi.js
+│   │   ├── utils/
+│   │   │   └── api.js          ← Axios instance with baseURL + interceptors
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── index.html
+│   ├── vite.config.js
+│   └── tailwind.config.js
+│
+├── server/
+│   ├── models/
+│   │   ├── Admin.js
+│   │   ├── Navbar.js
+│   │   ├── Hero.js
+│   │   ├── About.js
+│   │   ├── Skill.js
+│   │   ├── Experience.js
+│   │   ├── Education.js
+│   │   ├── GalleryPhoto.js
+│   │   ├── YouTubeVideo.js
+│   │   ├── Location.js
+│   │   ├── Message.js
+│   │   ├── Project.js
+│   │   ├── Testimonial.js
+│   │   └── SiteMeta.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── navbar.js
+│   │   ├── hero.js
+│   │   ├── about.js
+│   │   ├── skills.js
+│   │   ├── experience.js
+│   │   ├── education.js
+│   │   ├── gallery.js
+│   │   ├── youtube.js
+│   │   ├── locations.js
+│   │   ├── messages.js
+│   │   ├── projects.js
+│   │   ├── testimonials.js
+│   │   ├── sitemeta.js
+│   │   └── upload.js
+│   ├── middleware/
+│   │   ├── authMiddleware.js
+│   │   └── uploadMiddleware.js
+│   ├── config/
+│   │   ├── db.js
+│   │   └── cloudinary.js
+│   └── server.js
+│
+├── .env.example
+└── README.md
+
+═══════════════════════════════════════════════════════
+BACKEND — COMPLETE IMPLEMENTATION
+═══════════════════════════════════════════════════════
+
+── server.js ──
+- Express app setup
+- Connect MongoDB via config/db.js
+- helmet(), cors({ origin: process.env.CLIENT_URL, credentials: true })
+- morgan('dev')
+- express.json(), express.urlencoded()
+- cookie-parser
+- Mount all routes under /api/
+- Global error handler middleware
+- Listen on PORT from .env
+
+── config/db.js ──
+- mongoose.connect(process.env.MONGO_URI)
+- Log success/failure
+
+── config/cloudinary.js ──
+- cloudinary.config({ cloud_name, api_key, api_secret from .env })
+- Export cloudinary + multer-storage-cloudinary storage
+
+── middleware/authMiddleware.js ──
+- Verify JWT from httpOnly cookie (req.cookies.token)
+- If invalid/missing → 401 Unauthorized
+- Attach req.admin = decoded payload
+
+── middleware/uploadMiddleware.js ──
+- Multer instance using CloudinaryStorage
+- uploadImage: single image
+- uploadMultiple: up to 10 images
+- uploadPDF: pdf only
+
+── models/ (all Mongoose schemas with full fields) ──
+
+Admin.js:
+{
+  email: { type: String, required, unique, lowercase },
+  password: { type: String, required },  // bcrypt hashed
+  createdAt: Date
+}
+Methods: comparePassword(plain) → bcrypt.compare
+
+Navbar.js:
+{
+  brandName: { type: String, default: 'My Portfolio' },
+  logoUrl: String,
+  links: [{ label: String, href: String, order: Number, _id: false }],
+  showSocials: { type: Boolean, default: true },
+  socialLinks: {
+    github: String, linkedin: String, twitter: String,
+    instagram: String, youtube: String
+  }
+}
+
+Hero.js:
+{
+  slides: [{
+    imageUrl: String,
+    caption: String,
+    subCaption: String,
+    ctaText: String,
+    ctaLink: String,
+    order: Number
+  }],
+  autoSlideInterval: { type: Number, default: 4 }
+}
+
+About.js:
+{
+  name: String,
+  tagline: String,
+  bio: String,           // HTML from rich text editor
+  profilePhotoUrl: String,
+  resumeUrl: String,
+  yearsOfExperience: Number,
+  projectsCompleted: Number,
+  happyClients: Number
+}
+
+Skill.js:
+{
+  title: String,
+  category: { type: String, enum: ['Frontend','Backend','Database','DevOps','Other'] },
+  level: { type: String, enum: ['Beginner','Intermediate','Expert'] },
+  icon: String,          // emoji or URL
+  order: Number,
+  connectedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Skill' }]
+}
+
+Experience.js:
+{
+  company: String,
+  role: String,
+  startDate: String,
+  endDate: String,       // "Present" if current
+  isCurrent: Boolean,
+  description: String,
+  logoUrl: String,
+  techStack: [String],
+  order: Number
+}
+
+Education.js:
+{
+  institution: String,
+  degree: String,
+  field: String,
+  startYear: String,
+  endYear: String,
+  grade: String,
+  logoUrl: String,
+  certificateUrl: String,
+  type: { type: String, enum: ['Degree','Certification','Course'] },
+  order: Number
+}
+
+GalleryPhoto.js:
+{
+  imageUrl: String,
+  caption: String,
+  category: String,
+  order: Number
+}
+
+YouTubeVideo.js:
+{
+  videoId: String,       // extracted from URL
+  title: String,
+  description: String,
+  thumbnailUrl: String,  // auto: https://img.youtube.com/vi/{videoId}/hqdefault.jpg
+  order: Number
+}
+
+Location.js:
+{
+  name: String,
+  address: String,
+  city: String,
+  lat: Number,
+  lng: Number,
+  phone: String,
+  email: String,
+  isHeadOffice: Boolean,
+  order: Number
+}
+
+Message.js:
+{
+  name: String,
+  email: String,
+  subject: String,
+  message: String,
+  isRead: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}
+
+Project.js:
+{
+  title: String,
+  description: String,
+  imageUrl: String,
+  liveUrl: String,
+  githubUrl: String,
+  techStack: [String],
+  featured: Boolean,
+  order: Number
+}
+
+Testimonial.js:
+{
+  name: String,
+  role: String,
+  company: String,
+  photoUrl: String,
+  text: String,
+  rating: { type: Number, min: 1, max: 5 },
+  order: Number
+}
+
+SiteMeta.js:
+{
+  siteTitle: String,
+  faviconUrl: String,
+  primaryColor: { type: String, default: '#6366f1' },
+  accentColor: { type: String, default: '#f59e0b' },
+  metaDescription: String,
+  googleMapsApiKey: String,
+  maintenanceMode: { type: Boolean, default: false },
+  contactFormEnabled: { type: Boolean, default: true },
+  footerText: String,
+  copyrightName: String
+}
+
+── routes/ ──
+
+auth.js:
+POST /api/auth/setup     → First-time admin registration (blocked if admin exists)
+  - Body: { email, password, setupKey } — setupKey must match process.env.ADMIN_SETUP_KEY
+  - Hash password → save Admin → return success
+POST /api/auth/login     → Login
+  - Validate email+password → bcrypt.compare → sign JWT → set httpOnly cookie (maxAge 7d)
+POST /api/auth/logout    → Clear cookie
+GET  /api/auth/me        → authMiddleware → return { email, id }
+
+For ALL other sections, implement full CRUD:
+
+GET    /api/<section>           → Public — find all, sort by order
+POST   /api/<section>           → authMiddleware — create new document
+PUT    /api/<section>/:id       → authMiddleware — findByIdAndUpdate
+DELETE /api/<section>/:id       → authMiddleware — findByIdAndDelete
+PUT    /api/<section>/reorder   → authMiddleware — bulk update order field
+
+Special routes:
+POST /api/messages               → Public — save visitor message (rate limited: 5/hour per IP)
+GET  /api/messages               → authMiddleware — get all messages, sort by createdAt desc
+PUT  /api/messages/:id/read      → authMiddleware — mark as read
+GET  /api/messages/unread-count  → authMiddleware — return count of unread
+
+POST /api/upload/image  → authMiddleware + uploadMiddleware.uploadImage → return { url }
+POST /api/upload/images → authMiddleware + uploadMiddleware.uploadMultiple → return { urls: [] }
+POST /api/upload/pdf    → authMiddleware + uploadMiddleware.uploadPDF → return { url }
+
+GET  /api/sitemeta      → Public — return site meta
+PUT  /api/sitemeta      → authMiddleware — update (upsert)
+
+.env.example:
+PORT=5000
+MONGO_URI=mongodb+srv://...
+JWT_SECRET=your_super_secret_key_here
+ADMIN_SETUP_KEY=setup1234
+CLIENT_URL=http://localhost:5173
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+GOOGLE_MAPS_API_KEY=
+
+═══════════════════════════════════════════════════════
+FRONTEND — COMPLETE IMPLEMENTATION
+═══════════════════════════════════════════════════════
+
+── utils/api.js ──
+- Axios instance: baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+- withCredentials: true (for httpOnly cookie)
+- Request interceptor: log
+- Response interceptor: if 401 → redirect to /admin/login
+
+── context/AuthContext.jsx ──
+- State: { admin, loading }
+- checkAuth() on mount: GET /api/auth/me
+- login(email, password): POST /api/auth/login → set admin state
+- logout(): POST /api/auth/logout → clear admin state
+
+── App.jsx ──
+- BrowserRouter
+- Routes:
+  / → <Home />
+  /admin/login → <AdminLogin /> (redirect to /admin if already logged in)
+  /admin → <PrivateRoute><AdminDashboard /></PrivateRoute>
+- PrivateRoute: checks AuthContext, redirects to /admin/login if not authenticated
+
+═══════════════════════════════════════════════════════
+HOMEPAGE DESIGN — UI/UX (FULLY ANIMATED)
+═══════════════════════════════════════════════════════
+
+Design direction: Dark theme with deep space aesthetic.
+Background: #0a0a0f (near-black with slight blue tint)
+Primary accent: pulled from SiteMeta.primaryColor (default indigo #6366f1)
+Secondary accent: SiteMeta.accentColor (default amber #f59e0b)
+Font: "Syne" (headings, weights 400/700/800), "DM Sans" (body, weights 300/400/500)
+Import both from Google Fonts in index.css via @import
+
+All homepage components must:
+1. Use Framer Motion for entrance animations
+2. Use useInView from framer-motion for scroll-triggered reveals  
+3. Have smooth transitions between states
+4. Show skeleton loaders while fetching data
+5. Handle empty states gracefully (show placeholder if admin hasn't added content yet)
+
+── Navbar.jsx ──
+- Fetches /api/navbar on mount
+- Fixed top, glassmorphism effect: backdrop-blur-md bg-black/40 border-b border-white/10
+- Logo (image if logoUrl exists, else brandName text)
+- Nav links from database — smooth scroll if href starts with #
+- Social icons (github, linkedin etc.) from socialLinks — show only if showSocials=true
+- Mobile: hamburger menu with slide-down drawer (Framer Motion AnimatePresence)
+- Scroll behavior: hide on scroll down, show on scroll up (useScroll from framer-motion)
+- Active link highlight with animated underline indicator
+
+── HeroBanner.jsx ──
+- Fetches /api/hero
+- Full viewport height (100vh) slider
+- Slides transition with Framer Motion (opacity + slight Y translate)
+- Auto-advances every `autoSlideInterval` seconds
+- Dot indicators at bottom
+- Each slide: background image (cover), dark overlay, centered text
+- Caption: huge font (Syne 700, clamp(2.5rem, 6vw, 5rem)), stagger-animated letter by letter
+- SubCaption below: fade in after caption
+- CTA button: glowing border button with hover fill animation
+- Subtle particle effect background using Three.js (floating dots, slow drift)
+- Progress bar at bottom showing slide timing
+
+── About.jsx ──
+- Fetches /api/about
+- Two-column layout: left = profile photo, right = text
+- Profile photo: circular, glowing ring animation (CSS keyframe pulsing border)
+- Name: large Syne heading
+- Tagline: gradient text (indigo → amber)
+- Bio: render HTML from react-quill output
+- 3 stat counters: yearsOfExperience, projectsCompleted, happyClients
+  → Animated number count-up on scroll-into-view (custom useCountUp hook)
+- Resume download button (links to resumeUrl from DB)
+- Entrance: left side slides from left, right side slides from right
+
+── Skills3D.jsx ──
+- Fetches /api/skills
+- Three.js canvas (full section width, 600px height)
+- Each skill = a floating 3D node (RoundedBox mesh from drei)
+- Nodes colored by category (Frontend=indigo, Backend=emerald, Database=amber, etc.)
+- Nodes connected by animated lines (THREE.Line with dashed material)
+- Nodes slowly rotate and float (sine wave Y animation in useFrame)
+- Click on node: shows tooltip card with skill title, level, category
+- OrbitControls for user interaction (zoom + rotate)
+- Camera auto-rotates slowly when user not interacting
+- Below the 3D canvas: skill category filter pills 
+  → clicking a category highlights only those nodes
+- Level badge on each node (Beginner/Intermediate/Expert) rendered as HTML overlay via drei <Html>
+
+── Experience3D.jsx ──
+- Fetches /api/experience
+- Three.js horizontal timeline
+- Central axis line running left to right
+- Each job = floating card node above/below the axis, alternating
+- Card nodes: white-border boxes rendered with drei <Html> — show company, role, duration
+- Camera smoothly pans left-to-right as user scrolls down (useScroll from @react-three/drei)
+- Active node (near camera center): expands to show full description, techStack tags
+- TechStack tags: pill badges in accent color
+- Timeline dots on axis pulse gently
+- isCurrent job: glowing green dot + "Present" badge
+- Below canvas (non-3D): same experience as horizontal cards for mobile fallback
+
+── Education.jsx ──
+- Fetches /api/education
+- Two tabs: "Education" and "Certifications" (filter by type field)
+- Staggered card grid (Framer Motion stagger children)
+- Each card: institution logo, degree, field, year range, grade badge
+- Certification card: certificate image thumbnail, click to open full image modal
+- Cards hover: lift + border glow
+
+── Gallery.jsx ──
+- Fetches /api/gallery
+- Masonry grid layout (CSS columns: 3, gap: 1rem)
+- Category filter pills above (All + unique categories from DB)
+- Framer Motion layout animations when filtering (AnimatePresence + layout prop)
+- Each photo: hover → slight scale + overlay with caption
+- Click → lightbox modal (full screen image, prev/next navigation, close on ESC)
+- Lazy loading with loading="lazy" + blur placeholder
+
+── YouTubeSection.jsx ──
+- Fetches /api/youtube
+- Section heading: "Watch My Content" (or customizable via SiteMeta)
+- Horizontal scrollable card row (overflow-x: auto, custom scrollbar)
+- Each card: YouTube thumbnail image, video title, description (truncated)
+- Hover: card lifts + play button overlay appears
+- Click: opens YouTube in new tab (no embed, just link via videoId)
+- Cards animate in with stagger from left
+
+── LocationMap.jsx ──
+- Fetches /api/locations
+- Google Maps (react-google-maps/api) centered on first/head office
+- Custom dark map style (google maps dark theme JSON)
+- Each location = custom marker pin (animated bounce on load)
+- Click marker → InfoWindow with name, address, phone, email
+- isHeadOffice location: different colored marker (amber vs indigo)
+- Left sidebar: list of all locations as cards
+  → Click card → map pans to that location (panTo animation)
+  → Active card highlighted
+- Google Maps API key read from SiteMeta.googleMapsApiKey
+
+── ContactForm.jsx ──
+- Only renders if SiteMeta.contactFormEnabled = true
+- react-hook-form with full validation
+- Fields: name (required), email (required, valid email), subject (required), message (required, min 20 chars)
+- POST /api/messages on submit
+- Success: confetti burst (canvas-confetti library) + success toast
+- Error: error toast
+- Input fields: dark glassmorphism style with focus glow
+- Submit button: animated gradient background on hover
+- Rate limiting handled server-side (feedback to user if too many requests)
+
+── Footer.jsx ──
+- Simple dark footer
+- Copyright text from SiteMeta.copyrightName or footerText
+- Social links row
+- "⚙" admin login link: opacity-30, very small, bottom right — links to /admin/login
+- Animated border-top gradient line
+
+═══════════════════════════════════════════════════════
+ADMIN PANEL DESIGN — UI/UX
+═══════════════════════════════════════════════════════
+
+Design: Clean dark sidebar layout. Professional dashboard aesthetic.
+Sidebar: fixed left, 260px wide, dark background (#111118)
+Main content: scrollable, #16161f background
+Accent: same as homepage primaryColor from SiteMeta
+Font: "Syne" headings, "DM Sans" body
+
+── AdminDashboard.jsx ──
+- Layout: <Sidebar /> + <main content area>
+- React state: activeModule (default: 'overview')
+- Renders the correct manager component based on activeModule
+- Top bar: "Admin Panel", logged-in email, logout button
+
+── Sidebar.jsx ──
+- Logo/brand name at top
+- Navigation items (each with icon + label):
+  Overview, Navbar, Hero/Banner, About, Skills, Experience,
+  Education, Gallery, YouTube, Locations, Messages (with unread badge),
+  Projects, Testimonials, Site Settings
+- Active item: accent color highlight + left border
+- Framer Motion: hover scale + slide on mount
+- Bottom: logged-in admin email + logout button
+
+── Overview (Dashboard home) ──
+- Stat cards grid: Total Messages, Unread Messages, Total Skills, Total Projects, 
+  Total Gallery Photos, Total YouTube Videos
+- Each stat card: icon + number + label, subtle hover lift
+- Recent Messages table (last 5, with Read button)
+- Quick action buttons: "Add Skill", "Upload Photo", "Add Experience"
+- All data fetched from respective APIs
+
+── NavbarManager.jsx ──
+- Brand name text input
+- Logo image upload (calls POST /api/upload/image)
+- Nav Links section:
+  → react-beautiful-dnd DragDropContext for reorder
+  → Each link row: label input, href input, delete button
+  → "Add Link" button at bottom
+- Social Links section: toggle switch + URL input per platform
+- Save button → PUT /api/navbar (upsert — if none exists, create; else update)
+- Live preview panel: mini navbar preview updates as user types
+
+── BannerManager.jsx ──
+- Slide cards (up to 5):
+  → Image upload per slide
+  → Caption, SubCaption, CTA text, CTA link inputs
+  → Delete slide button
+- "Add Slide" button
+- react-beautiful-dnd drag to reorder slides
+- Auto-slide interval: range slider (1-10 seconds)
+- Save button
+
+── AboutEditor.jsx ──
+- Name, tagline text inputs
+- react-quill rich text editor for bio
+- Profile photo upload
+- Resume PDF upload
+- 3 number inputs: yearsOfExperience, projectsCompleted, happyClients
+- Save button
+
+── SkillsEditor.jsx ──
+- List of existing skills (cards with edit/delete)
+- "Add Skill" form:
+  → Title, Category (dropdown), Level (dropdown), Icon (emoji picker or text)
+  → Order number
+- Edit existing skill inline
+- Drag to reorder
+- "Connect Skills" button on each skill → select skills to connect (for roadmap graph edges)
+- Save button per skill (auto-saves on change with debounce)
+
+── ExperienceEditor.jsx ──
+- Timeline list of experiences (sorted by order)
+- "Add Experience" button → modal form:
+  → Company, Role, Start Date, End Date, "Currently Working Here" checkbox
+  → Description (textarea)
+  → Logo upload
+  → Tech Stack: tag input (type and press Enter to add tags)
+- Edit/Delete per entry
+- Drag to reorder
+
+── EducationEditor.jsx ──
+- Two sections: Education + Certifications (tabbed)
+- Add form: institution, degree, field, start year, end year, grade, logo upload
+- For certifications: also certificate image upload
+- Edit/Delete per entry
+
+── GalleryManager.jsx ──
+- Dropzone for multi-image upload (react-dropzone)
+  → POST /api/upload/images (multiple)
+  → After upload, show grid of uploaded images
+- Each image: caption input, category input, delete button
+- Drag-to-reorder grid
+- Category filter to view by category
+- Save all captions/categories at once
+
+── YouTubeManager.jsx ──
+- "Add Video" form:
+  → Paste YouTube URL → auto-extract videoId (regex)
+  → Auto-fill thumbnail URL from videoId
+  → Title, Description inputs
+- Video cards list with thumbnail preview
+- Edit/Delete per video
+- Drag to reorder
+
+── LocationManager.jsx ──
+- "Add Location" form:
+  → Name, Address, City
+  → Lat/Lng: manual input OR "Pick from Map" button → Google Maps picker modal
+  → Phone, Email
+  → "Is Head Office" checkbox
+- Location cards list
+- Edit/Delete per location
+- Mini Google Map preview showing all pins
+
+── MessagesInbox.jsx ──
+- Table: Name | Email | Subject | Date | Status (Read/Unread) | Actions
+- Unread rows highlighted (different background)
+- Click row → slide-down message body (accordion expand)
+- Mark as Read button (PUT /api/messages/:id/read)
+- Delete button
+- "Mark All Read" button at top
+- Unread count badge updates in sidebar
+
+── ProjectsManager.jsx ──
+- "Add Project" form:
+  → Title, Description, Image upload, Live URL, GitHub URL
+  → Tech Stack: tag input
+  → Featured checkbox (featured projects show prominently on homepage)
+- Project cards with image preview, edit/delete
+- Drag to reorder
+
+── TestimonialsManager.jsx ──
+- "Add Testimonial" form:
+  → Name, Role, Company, Photo upload, Text, Rating (1-5 star selector)
+- Cards with photo + text preview
+- Edit/Delete per testimonial
+- Drag to reorder
+
+── SiteSettings.jsx ──
+- Site Title input
+- Favicon upload
+- Primary Color: color picker input
+- Accent Color: color picker input
+- Meta Description textarea
+- Google Maps API Key input
+- Contact Form: enable/disable toggle
+- Maintenance Mode: toggle (shows "Coming Soon" on homepage if enabled)
+- Footer Text input
+- Copyright Name input
+- Save button → PUT /api/sitemeta
+- "Danger Zone" section at bottom: red border, "Reset All Content" button (requires typing "DELETE" to confirm)
+
+═══════════════════════════════════════════════════════
+PROJECTS SECTION (Homepage)
+═══════════════════════════════════════════════════════
+
+── Projects.jsx ──
+- Fetches /api/projects
+- Filters to featured=true for homepage, show all on "View All Projects" click
+- Bento grid layout (CSS grid with varying card sizes for featured vs normal)
+- Each card: project image (cover), title, description, tech stack pills
+- Hover: image zoom + overlay with Live Demo + GitHub buttons
+- Stagger animation on scroll-into-view
+
+═══════════════════════════════════════════════════════
+TESTIMONIALS SECTION (Homepage)
+═══════════════════════════════════════════════════════
+
+── Testimonials.jsx ──
+- Fetches /api/testimonials
+- Infinite horizontal auto-scroll carousel (CSS marquee effect)
+  → Two rows scrolling in opposite directions (left and right)
+- Each testimonial card: photo, name, role@company, star rating, quote text
+- Hover on any card pauses the scroll
+- Cards have glassmorphism dark background
+
+═══════════════════════════════════════════════════════
+HOMEPAGE SECTION ORDER
+═══════════════════════════════════════════════════════
+
+<Navbar />
+<HeroBanner />
+<About />
+<Skills3D />
+<Experience3D />
+<Education />
+<Projects />
+<Gallery />
+<Testimonials />
+<YouTubeSection />
+<LocationMap />
+<ContactForm />
+<Footer />
+
+═══════════════════════════════════════════════════════
+ANIMATION SYSTEM (Apply across ALL components)
+═══════════════════════════════════════════════════════
+
+In index.css define these custom CSS animations:
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+@keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px var(--primary-color,#6366f1)} 
+                         50%{box-shadow:0 0 40px var(--primary-color,#6366f1)} }
+@keyframes gradient-shift { 0%{background-position:0% 50%} 
+                             50%{background-position:100% 50%} 
+                             100%{background-position:0% 50%} }
+
+Framer Motion variants to use throughout (define in src/utils/variants.js):
+export const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } }
+}
+export const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12 } }
+}
+export const slideFromLeft = {
+  hidden: { opacity: 0, x: -60 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: 'easeOut' } }
+}
+export const slideFromRight = {
+  hidden: { opacity: 0, x: 60 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: 'easeOut' } }
+}
+export const scaleIn = {
+  hidden: { opacity: 0, scale: 0.85 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } }
+}
+
+All sections: wrap with <motion.section variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }}>
+
+Page transitions: wrap routes in <AnimatePresence mode="wait"> with fade transition
+
+Skeleton loaders: pulsing gray boxes matching the layout of actual content 
+(use Tailwind animate-pulse with bg-white/10 rounded blocks)
+
+═══════════════════════════════════════════════════════
+RESPONSIVE DESIGN
+═══════════════════════════════════════════════════════
+
+All sections fully responsive:
+- Mobile (<768px): single column, hamburger nav, Three.js sections 
+  show 2D fallback card grids (check window.innerWidth < 768, skip Three.js canvas)
+- Tablet (768-1024px): two columns where applicable
+- Desktop (>1024px): full multi-column layouts
+
+Admin panel mobile: sidebar collapses to bottom drawer with hamburger toggle
+
+═══════════════════════════════════════════════════════
+FIRST-TIME SETUP FLOW
+═══════════════════════════════════════════════════════
+
+1. User clones project, sets .env variables
+2. Runs: cd server && npm install && npm start
+         cd client && npm install && npm run dev
+3. Visits /admin/login
+4. First visit: shows "Setup Admin Account" form (email + password + ADMIN_SETUP_KEY)
+   → POST /api/auth/setup → creates admin → redirects to /admin
+5. From /admin: fills in all sections
+6. Homepage at / shows live data immediately
+
+Admin login page (/admin/login):
+- If setup not done (no admin in DB), show setup form
+- If setup done, show login form
+- After login → redirect to /admin
+- Forgot password: not needed (single user, they can reset via MongoDB directly — note in README)
+
+═══════════════════════════════════════════════════════
+MAINTENANCE MODE
+═══════════════════════════════════════════════════════
+
+If SiteMeta.maintenanceMode = true:
+- Homepage shows a full-screen "Coming Soon" page
+  → Animated gradient background
+  → Big text: "Something amazing is coming"
+  → Small text: "Check back soon"
+- Admin panel still accessible via /admin/login (not affected by maintenance mode)
+
+═══════════════════════════════════════════════════════
+README.md
+═══════════════════════════════════════════════════════
+
+Write a complete README.md with:
+- Project overview
+- Tech stack
+- Folder structure
+- Step-by-step setup instructions
+- .env variables explanation
+- First-time admin setup steps
+- Deployment instructions (Vercel for frontend, Railway for backend, MongoDB Atlas, Cloudinary)
+- How to give this to someone else (just change .env variables)
+- Screenshots section placeholder
+
+═══════════════════════════════════════════════════════
+IMPORTANT IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════
+
+1. Write COMPLETE, WORKING code for every file. No placeholder comments like 
+   "// add your logic here" or "// implement this". Every function must be fully implemented.
+
+2. Every API route must have:
+   - Input validation (express-validator)
+   - Try-catch with proper error responses
+   - Correct HTTP status codes (200, 201, 400, 401, 404, 500)
+
+3. Every React component must:
+   - Handle loading state (show skeleton)
+   - Handle error state (show error message with retry button)
+   - Handle empty state (show helpful placeholder, not just blank)
+
+4. All image uploads go through Cloudinary. Never store images locally.
+
+5. JWT is stored in httpOnly cookie. Never in localStorage.
+
+6. All admin routes are protected by authMiddleware. A user cannot bypass this.
+
+7. Rate limiting on contact form: 5 requests per hour per IP.
+
+8. All text that appears on homepage must be editable from admin panel. 
+   Nothing is hardcoded except loading states and error messages.
+
+9. package.json for both client and server must include all required dependencies 
+   with correct versions that are compatible with each other (as of 2024).
+
+10. vite.config.js must include proxy config: 
+    '/api' → 'http://localhost:5000' for development.
+
+11. tailwind.config.js must include content paths for all .jsx files.
+
+12. The Three.js sections (Skills3D and Experience3D) must gracefully degrade on 
+    mobile — detect window.innerWidth < 768 and render a simple card list instead 
+    of the 3D canvas.
+
+Start building now. Generate the complete codebase file by file, 
+starting with server/server.js, then all models, then all routes, 
+then middleware, then client/src/utils/api.js, 
+then context/AuthContext.jsx, then App.jsx, 
+then each homepage component, then each admin component. 
+Do not skip any file. Write production-ready code throughout.g
